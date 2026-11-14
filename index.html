@@ -998,6 +998,28 @@ body:not(.panel-min) #geteMapTools{top:65px}
 #painel>header.geoeduc-header .brand-credit{position:relative;z-index:1}
 @media(max-width:820px){#painel>header.geoeduc-header{padding:13px 14px 12px!important}#painel>header.geoeduc-header .brand-name{font-size:clamp(20px,6vw,26px)}#painel>header.geoeduc-header .institutional-logo{margin-top:10px;padding:7px 9px}#painel>header.geoeduc-header .institutional-logo img{max-height:58px}#painel>header.geoeduc-header .brand-rule{margin:10px 0 8px}#painel>header.geoeduc-header h1{font-size:13px}#painel>header.geoeduc-header .brand-context{margin-top:7px}}
 @media(max-width:360px){#painel>header.geoeduc-header .brand-name{font-size:19px}#painel>header.geoeduc-header .brand-mark{flex-basis:37px;width:37px;height:37px}}
+
+/* GETELOG: navegação rápida escola a escola */
+.getelog-navquick{border-top:4px solid #1769aa!important;background:linear-gradient(180deg,#f4f9ff,#fff)!important}
+.getelog-navgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.getelog-navgrid label{display:flex;flex-direction:column;align-items:stretch;gap:5px;font-size:12px;font-weight:700;color:#23496c}
+.getelog-navgrid select{width:100%;min-width:0;padding:10px 8px;background:white}
+.getelog-navgrid input[type="search"]{width:100%;min-width:0;padding:10px 9px;border:1px solid #cbd9e8;border-radius:8px;background:#fff;font:inherit;font-weight:500;color:#173b62}
+.getelog-navgrid input[type="search"]:focus{outline:2px solid #9cc8f3;border-color:#1769aa}
+.getelog-navgrid select.nav-source-select{display:none}
+.getelog-navquick .row button{min-height:38px}
+@media(max-width:600px){.getelog-navgrid{grid-template-columns:1fr}.getelog-navquick .row button{flex:1 1 100%}}
+/* v70: listas de rota longas não devem empurrar o restante do painel indefinidamente. */
+#log-rotas #paradas{max-height:260px;overflow-y:auto;overscroll-behavior:contain;padding-right:6px}
+#log-rotas #resultado{max-height:340px;overflow-y:auto;overscroll-behavior:contain}
+
+/* v72: autocompletar acessível e pesquisável por parte do nome */
+.getelog-navgrid label{position:relative}
+.getelog-navgrid .nav-sugestoes{position:absolute;top:calc(100% - 2px);left:0;right:0;z-index:2300;max-height:245px;overflow-y:auto;background:#fff;border:1px solid #a9c4df;border-radius:0 0 10px 10px;box-shadow:0 10px 25px #102b5230}
+.getelog-navgrid .nav-sugestoes[hidden]{display:none}
+.getelog-navgrid .nav-sug-item{display:block;width:100%;text-align:left;border:0;border-bottom:1px solid #e9eef5;border-radius:0;padding:10px;background:#fff;color:#193b60;font-size:12px;white-space:normal}
+.getelog-navgrid .nav-sug-item:hover,.getelog-navgrid .nav-sug-item.ativo{background:#e5f1ff}
+.getelog-navgrid .nav-sug-vazio{padding:12px;font-size:12px;color:#63758a}
 </style>
 <style id="pgStyle"></style>
 <style>
@@ -1534,6 +1556,10 @@ body.panel-full:not(.imp):not(.impI) #painelTools{margin-inline:calc(-1 * clamp(
 <section class="log-view" hidden="" id="log-rotas">
 <h3>Planejamento livre no mapa</h3><p class="log-lead">Use esta ferramenta para testar a ordem de visita de escolas e creches, selecionar bairros e visualizar o percurso no mapa. Este planejamento é independente das entregas e não gera recibos.</p>
 <div class="log-route-warning"><b>Importante:</b> se a equipe realmente vai realizar uma entrega ou visita e você precisa registrar o recebimento, faça o planejamento em “Entregas e recibos”. Use esta tela apenas para estudar ou imprimir um itinerário livre.</div>
+<div class="log-block getelog-navquick" id="navQuick"><h3>🚚 Navegação rápida entre escolas</h3><p class="log-lead">Já está em uma unidade e precisa ir para outra? Escolha de onde sai e para onde vai. Não é necessário criar solicitação ou entrega.</p>
+<div class="getelog-navgrid"><label>Estou em<input id="navOrigemBusca" type="search" autocomplete="off" placeholder="Digite o nome da escola" aria-label="Pesquisar escola de saída"/><select id="navOrigem" class="nav-source-select" aria-label="Escola de saída"><option value="">Selecione a unidade de saída</option></select></label><label>Quero ir para<input id="navDestinoBusca" type="search" autocomplete="off" placeholder="Digite o nome da escola" aria-label="Pesquisar escola de destino"/><select id="navDestino" class="nav-source-select" aria-label="Escola de destino"><option value="">Selecione a unidade de destino</option></select></label><datalist id="navUnidades"></datalist></div>
+<div class="row"><button id="navTrocar" type="button">⇄ Inverter escolas</button><button id="navVisualizar" type="button">Ver pontos no mapa</button><button class="pri" id="navAbrir" type="button">🧭 Abrir trajeto no Google Maps</button></div>
+<div class="row"><button id="navGps" type="button">📍 Navegar da minha localização atual</button></div><p class="log-note" id="navStatus" aria-live="polite">O Google Maps calcula o percurso viário. A localização atual requer permissão e normalmente HTTPS (por exemplo, GitHub Pages).</p></div>
 <div class="log-block"><h3>1. Escolher a saída e as paradas</h3>
 <label>Ponto de saída<select id="origem"></select></label>
 <label>Adicionar todas as unidades de um bairro<select id="selB"></select></label><div class="row"><button id="addB" type="button">Adicionar bairro</button></div>
@@ -2042,8 +2068,57 @@ function cobertura(){
 }
 $('tab').onclick=e=>{const b=e.target.closest('[data-b]');if(b){map.fitBounds(L.latLngBounds(B[b.dataset.b].polys.flat(2)));abreBairro(b.dataset.b)}};
 
+/* Navegação rápida: escolas de origem/destino e posição atual, sem alterar rotas existentes. */
+(function(){
+ const from=$('navOrigem'),to=$('navDestino'),status=$('navStatus');
+ if(!from||!to)return;
+ const unidades=U.filter(u=>Number.isFinite(+u.la)&&Number.isFinite(+u.lo)&&Math.abs(+u.la)<=90&&Math.abs(+u.lo)<=180).slice().sort((a,b)=>a.n.localeCompare(b.n,'pt-BR'));
+ unidades.forEach(u=>{from.add(new Option(u.n+' — '+(u.b||'Bairro não informado'),u.id));to.add(new Option(u.n+' — '+(u.b||'Bairro não informado'),u.id))});
+ // Pesquisa com sugestões próprias: funciona por parte do nome, sem exigir texto exato.
+ const inputFrom=$('navOrigemBusca'),inputTo=$('navDestinoBusca');
+ const ids=new Map(unidades.map(u=>[String(u.id),u.n+' — '+(u.b||'Bairro não informado')]));
+ const normalizar=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+ const aviso=t=>{status.textContent=t};
+ const configurar=(input,sel)=>{
+   const menu=document.createElement('div');menu.className='nav-sugestoes';menu.setAttribute('role','listbox');menu.hidden=true;
+   input.parentElement.appendChild(menu);
+   let itens=[],indice=-1;
+   const fechar=()=>{menu.hidden=true;indice=-1};
+   const escolher=u=>{sel.value=String(u.id);input.value=ids.get(String(u.id));fechar();aviso('Unidade selecionada: '+u.n)};
+   const render=()=>{
+     const q=normalizar(input.value);
+     if(!q){sel.value='';fechar();return}
+     itens=unidades.filter(u=>normalizar(u.n+' '+(u.b||'')).includes(q)).slice(0,30);
+     if(!itens.length){sel.value='';menu.replaceChildren();const empty=document.createElement('div');empty.className='nav-sug-vazio';empty.textContent='Nenhuma escola encontrada';menu.appendChild(empty);menu.hidden=false;return}
+     if(ids.get(sel.value)!==input.value)sel.value='';
+     menu.replaceChildren();indice=-1;
+     itens.forEach((u,i)=>{const b=document.createElement('button');b.type='button';b.className='nav-sug-item';b.setAttribute('role','option');b.textContent=ids.get(String(u.id));b.addEventListener('mousedown',e=>e.preventDefault());b.addEventListener('click',()=>escolher(u));menu.appendChild(b)});
+     menu.hidden=false;
+   };
+   input.addEventListener('input',render);
+   input.addEventListener('focus',()=>{if(input.value&&ids.get(sel.value)!==input.value)render()});
+   input.addEventListener('keydown',e=>{
+     if(e.key==='Escape'){fechar();return}
+     if(menu.hidden||!itens.length)return;
+     if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();indice=(indice+(e.key==='ArrowDown'?1:-1)+itens.length)%itens.length;[...menu.querySelectorAll('button')].forEach((b,i)=>b.classList.toggle('ativo',i===indice));return}
+     if(e.key==='Enter'){e.preventDefault();escolher(itens[indice>=0?indice:0])}
+   });
+   input.addEventListener('blur',()=>setTimeout(fechar,160));
+   return {fechar,escolher};
+ };
+ const origemUI=configurar(inputFrom,from),destinoUI=configurar(inputTo,to);
+ const refreshInputs=()=>{inputFrom.value=ids.get(from.value)||'';inputTo.value=ids.get(to.value)||'';origemUI.fechar();destinoUI.fechar()};
+ const coord=u=>Number(u.la).toFixed(6)+','+Number(u.lo).toFixed(6);
+ const pick=sel=>U[Number(sel.value)];
+ const destino=()=>{const d=pick(to);if(!d){aviso('Digite e escolha uma escola de destino nas sugestões.');inputTo.focus();return null}return d};
+ function openMaps(origin,dest){const url='https://www.google.com/maps/dir/?api=1&origin='+encodeURIComponent(origin)+'&destination='+encodeURIComponent(dest)+'&travelmode=driving';const w=window.open(url,'_blank','noopener,noreferrer');if(!w)aviso('O navegador bloqueou a nova aba. Permita pop-ups para abrir o Google Maps.');else aviso('Trajeto aberto no Google Maps. Confira as vias e restrições para o caminhão antes de sair.');}
+ $('navTrocar').onclick=()=>{const a=from.value;from.value=to.value;to.value=a;refreshInputs();aviso('Origem e destino invertidos.')};
+ $('navAbrir').onclick=()=>{const a=pick(from),b=destino();if(!b)return;if(!a){aviso('Selecione a escola de saída ou use a opção da localização atual.');inputFrom.focus();return}if(a.id===b.id){aviso('Escolha duas unidades diferentes.');return}openMaps(coord(a),coord(b))};
+ $('navVisualizar').onclick=()=>{const a=pick(from),b=destino();if(!b)return;const pts=a?[[a.la,a.lo],[b.la,b.lo]]:[[b.la,b.lo]];try{map.fitBounds(L.latLngBounds(pts).pad(.25),{maxZoom:16,padding:[35,35]});if(a)aviso('As duas unidades estão enquadradas no mapa. Para seguir pelas ruas, abra o Google Maps.');else aviso('Destino localizado no mapa.')}catch(e){aviso('Não foi possível enquadrar os pontos no mapa.')}};
+ $('navGps').onclick=()=>{const b=destino();if(!b)return;if(!navigator.geolocation){aviso('Geolocalização não disponível neste navegador.');return}aviso('Solicitando sua localização atual…');navigator.geolocation.getCurrentPosition(p=>{if(!Number.isFinite(p.coords.latitude)||!Number.isFinite(p.coords.longitude)){aviso('Localização inválida.');return}openMaps(p.coords.latitude.toFixed(6)+','+p.coords.longitude.toFixed(6),coord(b))},e=>{aviso(e.code===1?'Permissão de localização negada. Ative a localização do navegador.':'Não foi possível obter a localização. Verifique o GPS e a conexão.')},{enableHighAccuracy:true,timeout:12000,maximumAge:30000})};
+})();
 /* rota */
-let stops=[],ROTA=null;
+let stops=[],ROTA=null,rotaGeracao=0;
 const norm=s=>String(s??'').replace(/\u00a0/g,' ').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim().replace(/\s+/g,' ');
 const temAee=u=>{const a=norm(u.aee||'');return !!a&&a!=='-'&&a!=='nao'&&a!=='n'};
 function lista(){aplicaFoco();
@@ -2053,10 +2128,37 @@ function lista(){aplicaFoco();
 $('busca').oninput=lista;
 $('lista').onchange=e=>{const i=+e.target.dataset.u;stops=e.target.checked?(stops.includes(i)?stops:[...stops,i]):stops.filter(x=>x!=i);paradas()};
 $('marcaTodas').onclick=()=>{$('lista').querySelectorAll('input').forEach(c=>{const i=+c.dataset.u;if(!stops.includes(i))stops.push(i)});paradas()};
-function paradas(){$('nRota').textContent=stops.length?` (${stops.length})`:'';const ok=ROTA&&ROTA.ids.length==stops.length&&ROTA.ids.every(i=>stops.includes(i));$('docB').disabled=$('docW').disabled=!ok;$('lista').querySelectorAll('input').forEach(c=>c.checked=stops.includes(+c.dataset.u));$('paradas').innerHTML=stops.map(i=>`<li>${esc(U[i].n)} <button aria-label="Remover" onclick="stops=stops.filter(x=>x!=${i});paradas()">remover</button></li>`).join('')||'<li class="mut">Nenhuma parada ainda.</li>';if(!info.hidden&&atual)atual()}
+function paradas(){$('nRota').textContent=stops.length?` (${stops.length})`:'';const ok=ROTA&&ROTA.ids.length==stops.length&&ROTA.ids.every(i=>stops.includes(i));$('docB').disabled=$('docW').disabled=!ok;$('lista').querySelectorAll('input').forEach(c=>c.checked=stops.includes(+c.dataset.u));$('paradas').innerHTML=stops.map(i=>`<li>${esc(U[i].n)} <button aria-label="Remover" onclick="stops=stops.filter(x=>x!=${i});paradas()">remover</button></li>`).join('')||'<li class="mut">Nenhuma parada ainda.</li>';if(!info.hidden&&atual){try{atual()}catch(err){console.warn('Ficha não atualizada após mudar paradas:',err)}}}
 window.addStop=i=>{if(!stops.includes(i))stops.push(i);paradas();map.closePopup()};
 $('addB').onclick=()=>{vis().filter(u=>u.bn==$('selB').value).forEach(u=>addStop(u.id))};
-$('limpa').onclick=()=>{stops=[];ROTA=null;paradas();g.rota.clearLayers();$('resultado').innerHTML=''};
+$('limpa').onclick=()=>{
+  // Invalida cálculos pendentes e limpa primeiro as camadas visuais.
+  rotaGeracao++;
+  stops=[];
+  ROTA=null;
+  try { g.rota.clearLayers(); } catch(err) { console.warn('Limpeza do desenho da rota:',err); }
+  $('resultado').replaceChildren();
+  // A lista de dezenas de escolas encolhe ao limpar; reposiciona a rolagem
+  // para não deixar o painel em uma área vazia (observado no vídeo).
+  const painelRotas=$('painel');
+  const voltarAoPlanejamento=()=>{
+    const alvo=$('busca');
+    if(!painelRotas||!alvo||!alvo.isConnected)return;
+    const pos=alvo.getBoundingClientRect().top-painelRotas.getBoundingClientRect().top+painelRotas.scrollTop-110;
+    painelRotas.scrollTop=Math.max(0,pos);
+  };
+  // Evita atualizar fichas/popup antigos enquanto a seleção é redefinida.
+  try { if(map && map.closePopup) map.closePopup(); } catch(err) {}
+  try { paradas(); } catch(err) {
+    console.error('Erro ao atualizar a lista de paradas:',err);
+    $('nRota').textContent='';
+    $('paradas').innerHTML='<li class="mut">Nenhuma parada ainda.</li>';
+    $('docB').disabled=$('docW').disabled=true;
+    $('lista').querySelectorAll('input[type=checkbox]').forEach(c=>c.checked=false);
+  }
+  voltarAoPlanejamento();
+  requestAnimationFrame(voltarAoPlanejamento);
+};
 /* Servidor de rotas (OSRM). O demo público é só para testes: para produção, aponte para um servidor próprio. */
 const OSRM_PADRAO='https://router.project-osrm.org/trip/v1/driving',OSRM_KEY='gete_osrm_url';
 let OSRM_URL=window.GETE_OSRM_URL||(()=>{try{return localStorage.getItem(OSRM_KEY)}catch(e){return null}})()||OSRM_PADRAO;
@@ -2089,7 +2191,10 @@ function desenharRota(R){
 $('calc').onclick=async()=>{
   if(!stops.length){$('resultado').textContent='Adicione ao menos uma parada.';return}
   $('resultado').textContent='Calculando…';
-  const R=await calcularRota(stops,+$('origem').value,$('volta').checked);
+  const geracao=++rotaGeracao;
+  const ids=stops.slice();
+  const R=await calcularRota(ids,+$('origem').value,$('volta').checked);
+  if(geracao!==rotaGeracao)return; // seleção foi limpa ou outro cálculo iniciado
   const {pts,ordem,legs,km,min,aprox,volta,o,gm,geo}=R;
   desenharRota(R);
   ROTA=R;paradas();
